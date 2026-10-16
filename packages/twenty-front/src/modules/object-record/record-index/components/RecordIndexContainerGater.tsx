@@ -11,6 +11,7 @@ import { RecordIndexContainer } from '@/object-record/record-index/components/Re
 import { RecordIndexContainerContextStoreNumberOfSelectedRecordsEffect } from '@/object-record/record-index/components/RecordIndexContainerContextStoreNumberOfSelectedRecordsEffect';
 import { RecordIndexEmptyStateNotShared } from '@/object-record/record-index/components/RecordIndexEmptyStateNotShared';
 import { RecordIndexLoadBaseOnContextStoreEffect } from '@/object-record/record-index/components/RecordIndexLoadBaseOnContextStoreEffect';
+import { PeopleSelectionActionBar } from '@/object-record/record-index/components/PeopleSelectionActionBar';
 import { RecordIndexPageHeader } from '@/object-record/record-index/components/RecordIndexPageHeader';
 import { RecordIndexViewFieldsSSESyncEffect } from '@/object-record/record-index/components/RecordIndexViewFieldsSSESyncEffect';
 import { useHandleIndexIdentifierClick } from '@/object-record/record-index/hooks/useHandleIndexIdentifierClick';
@@ -108,6 +109,7 @@ export const RecordIndexContainerGater = () => {
             }}
           >
             <PageTitle title={objectMetadataItem.labelPlural} />
+            <PeopleSelectionActionBar />
             <PageCardLayout
               header={<RecordIndexPageHeader />}
               secondaryBar={hasObjectReadPermissions && <RecordIndexViewBar />}

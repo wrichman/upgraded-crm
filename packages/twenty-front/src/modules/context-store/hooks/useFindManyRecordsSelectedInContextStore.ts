@@ -8,6 +8,7 @@ import { useObjectMetadataItemById } from '@/object-metadata/hooks/useObjectMeta
 import { fieldMetadataItemByIdMapSelector } from '@/object-metadata/states/fieldMetadataItemByIdMapSelector';
 import { flattenedFieldMetadataItemsSelector } from '@/object-metadata/states/flattenedFieldMetadataItemsSelector';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { type RecordGqlOperationGqlRecordFields } from 'twenty-shared/types';
 import { useFilterValueDependencies } from '@/object-record/record-filter/hooks/useFilterValueDependencies';
 import { RecordFilterOperand } from '@/object-record/record-filter/types/RecordFilterOperand';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
@@ -16,9 +17,13 @@ import { useAtomStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomState
 export const useFindManyRecordsSelectedInContextStore = ({
   instanceId,
   limit = 3,
+  skip = false,
+  recordGqlFields,
 }: {
   instanceId?: string;
   limit?: number;
+  skip?: boolean;
+  recordGqlFields?: RecordGqlOperationGqlRecordFields;
 }) => {
   const contextStoreCurrentObjectMetadataItemId = useAtomComponentStateValue(
     contextStoreCurrentObjectMetadataItemIdComponentState,
@@ -84,9 +89,11 @@ export const useFindManyRecordsSelectedInContextStore = ({
         position: 'AscNullsFirst',
       },
     ],
+    recordGqlFields,
     skip:
-      contextStoreTargetedRecordsRule.mode === 'selection' &&
-      contextStoreTargetedRecordsRule.selectedRecordIds.length === 0,
+      skip ||
+      (contextStoreTargetedRecordsRule.mode === 'selection' &&
+        contextStoreTargetedRecordsRule.selectedRecordIds.length === 0),
     limit,
   });
 
