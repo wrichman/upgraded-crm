@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 
-import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
+import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
+import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
+import { useFindManyRecordsQuery } from '@/object-record/hooks/useFindManyRecordsQuery';
 import { useFindManyRecordIndexTableParams } from '@/object-record/record-index/hooks/useFindManyRecordIndexTableParams';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { postUpgradedEnrich } from '@/object-record/upgraded-enrich/postUpgradedEnrich';
@@ -11,7 +13,15 @@ import { isDefined } from 'twenty-shared/utils';
 import { LightButton, useToast } from 'twenty-ui/components';
 import { IconWand } from 'twenty-ui/icon';
 
-const VIEW_ENRICH_LIMIT = 40;
+const PERSON_PAGE_SIZE = 200;
+const PERSON_PAGE_CAP = 50;
+const COMPANY_PAGE_SIZE = 40;
+
+type ViewConnection = {
+  edges?: { node?: { id?: string } }[];
+  pageInfo?: { hasNextPage?: boolean; endCursor?: string | null };
+  totalCount?: number;
+};
 
 export const UpgradedEnrichViewButton = () => {
   const workspaceSurface = useWorkspaceSurface();
@@ -38,62 +48,90 @@ const EnrichViewButton = ({
   object: 'person' | 'company';
 }) => {
   const { enqueueToast } = useToast();
-  const [armed, setArmed] = useState(false);
-  const sent = useRef(false);
+  const [busy, setBusy] = useState(false);
   const params = useFindManyRecordIndexTableParams(objectNameSingular);
-  const { records, loading, totalCount } = useFindManyRecords({
-    ...params,
-    limit: VIEW_ENRICH_LIMIT,
-    skip: !armed,
+  const { objectMetadataItem } = useObjectMetadataItem({ objectNameSingular });
+  const apolloCoreClient = useApolloCoreClient();
+  const { findManyRecordsQuery } = useFindManyRecordsQuery({
+    objectNameSingular,
     recordGqlFields: { id: true },
   });
 
-  useEffect(() => {
-    if (!armed) {
-      sent.current = false;
-      return;
-    }
-    if (loading || sent.current) {
-      return;
-    }
-    sent.current = true;
-    const ids = records
-      .map((record) => (typeof record.id === 'string' ? record.id : ''))
-      .filter(Boolean);
-    const truncated = (totalCount ?? ids.length) > ids.length;
-    const posted =
-      ids.length > 0 &&
-      postUpgradedEnrich({
-        object,
-        ids,
-        scope: 'view',
-        truncated,
-        totalCount: totalCount ?? ids.length,
-      });
+  const enrichView = async () => {
+    if (!isDefined(objectMetadataItem) || busy) return;
+    setBusy(true);
+    try {
+      const pageSize = object === 'person' ? PERSON_PAGE_SIZE : COMPANY_PAGE_SIZE;
+      const maxPages = object === 'person' ? PERSON_PAGE_CAP : 1;
+      const ids: string[] = [];
+      let cursor: string | undefined;
+      let total = 0;
+      let hasMore = false;
 
-    if (ids.length === 0) {
+      for (let page = 0; page < maxPages; page += 1) {
+        const { data } = await apolloCoreClient.query({
+          query: findManyRecordsQuery,
+          variables: {
+            filter: params.filter,
+            orderBy: params.orderBy,
+            limit: pageSize,
+            lastCursor: cursor,
+          },
+          fetchPolicy: 'network-only',
+        });
+        const connection = (data as Record<string, ViewConnection> | undefined)?.[
+          objectMetadataItem.namePlural
+        ];
+        total = connection?.totalCount ?? total;
+        for (const edge of connection?.edges ?? []) {
+          if (typeof edge?.node?.id === 'string') ids.push(edge.node.id);
+        }
+        const endCursor = connection?.pageInfo?.endCursor;
+        hasMore = Boolean(connection?.pageInfo?.hasNextPage && endCursor);
+        if (!hasMore || object !== 'person') break;
+        cursor = endCursor ?? undefined;
+      }
+
+      const truncated = hasMore || total > ids.length;
+      const posted =
+        ids.length > 0 &&
+        postUpgradedEnrich({
+          object,
+          ids,
+          scope: 'view',
+          truncated,
+          totalCount: total || ids.length,
+        });
+
+      if (ids.length === 0) {
+        enqueueToast({
+          variant: 'warning',
+          children: t`This view has no records to enrich.`,
+        });
+      } else if (!posted) {
+        enqueueToast({
+          variant: 'warning',
+          children: t`Open the CRM from Labs to enrich this view.`,
+        });
+      }
+    } catch {
       enqueueToast({
         variant: 'warning',
-        children: t`This view has no records to enrich.`,
+        children: t`Could not load this view for enrichment.`,
       });
-    } else if (!posted) {
-      enqueueToast({
-        variant: 'warning',
-        children: t`Open the CRM from Labs to enrich this view.`,
-      });
+    } finally {
+      setBusy(false);
     }
-
-    setArmed(false);
-  }, [armed, enqueueToast, loading, object, records, totalCount]);
+  };
 
   return (
     <LightButton
       startIcon={<IconWand size={14} />}
-      disabled={armed}
-      title={t`Enrich the records in this view`}
-      onClick={() => setArmed(true)}
+      disabled={busy}
+      title={object === 'person' ? t`Enrich everyone in this view` : t`Enrich the records in this view`}
+      onClick={() => void enrichView()}
     >
-      {armed ? t`Enriching…` : t`Enrich view`}
+      {busy ? t`Loading view…` : object === 'person' ? t`Enrich all` : t`Enrich view`}
     </LightButton>
   );
 };
