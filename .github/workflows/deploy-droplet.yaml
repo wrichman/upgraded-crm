@@ -1,0 +1,36 @@
+name: Deploy CRM droplet
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/twenty-front/**"
+      - "scripts/deploy-crm-front.sh"
+      - "scripts/install-crm-front.sh"
+      - ".github/workflows/deploy-droplet.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-crm-droplet
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: ./.github/actions/yarn-install
+
+      - name: Build frontend
+        run: NODE_OPTIONS=--max-old-space-size=6144 npx nx build twenty-front
+
+      - name: Deploy frontend to the droplet
+        env:
+          CRM_SSH_KEY: ${{ secrets.DROPLET_SSH_KEY }}
+          CRM_HOST: ${{ secrets.DROPLET_HOST }}
+        run: ./scripts/deploy-crm-front.sh production
