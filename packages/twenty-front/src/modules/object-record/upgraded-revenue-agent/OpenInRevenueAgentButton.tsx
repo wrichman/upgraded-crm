@@ -4,7 +4,6 @@ import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { useFindManyRecordIndexTableParams } from '@/object-record/record-index/hooks/useFindManyRecordIndexTableParams';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
-import { t } from '@lingui/core/macro';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { LightButton, useToast } from 'twenty-ui/components';
@@ -94,7 +93,7 @@ const OpenViewButton = ({ objectNameSingular }: { objectNameSingular: string }) 
     if (people.length === 0) {
       enqueueToast({
         variant: 'warning',
-        children: t`This view has no people to open.`,
+        children: 'This view has no people to open.',
       });
       setArmed(false);
       return;
@@ -103,7 +102,7 @@ const OpenViewButton = ({ objectNameSingular }: { objectNameSingular: string }) 
     if (window.parent === window) {
       enqueueToast({
         variant: 'warning',
-        children: t`Open the CRM from Labs to send this view to the Revenue Agent.`,
+        children: 'Open the CRM from Labs to send this view to the Revenue Agent.',
       });
       setArmed(false);
       return;
@@ -125,10 +124,10 @@ const OpenViewButton = ({ objectNameSingular }: { objectNameSingular: string }) 
     <LightButton
       startIcon={<IconMessage size={14} />}
       disabled={armed}
-      title={t`Open this People view in the Revenue Agent, in the same order`}
+      title="Open this People view in the Revenue Agent, in the same order"
       onClick={() => setArmed(true)}
     >
-      {armed ? t`Opening…` : t`Revenue Agent`}
+      {armed ? 'Opening…' : 'Run Revenue Agent'}
     </LightButton>
   );
 };

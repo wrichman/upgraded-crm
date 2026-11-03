@@ -2,12 +2,12 @@ import { useState } from 'react';
 
 import { useApolloCoreClient } from '@/object-metadata/hooks/useApolloCoreClient';
 import { useObjectMetadataItem } from '@/object-metadata/hooks/useObjectMetadataItem';
+import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { useFindManyRecordsQuery } from '@/object-record/hooks/useFindManyRecordsQuery';
 import { useFindManyRecordIndexTableParams } from '@/object-record/record-index/hooks/useFindManyRecordIndexTableParams';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { postUpgradedEnrich } from '@/object-record/upgraded-enrich/postUpgradedEnrich';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
-import { t } from '@lingui/core/macro';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
 import { LightButton, useToast } from 'twenty-ui/components';
@@ -50,6 +50,13 @@ const EnrichViewButton = ({
   const { enqueueToast } = useToast();
   const [busy, setBusy] = useState(false);
   const params = useFindManyRecordIndexTableParams(objectNameSingular);
+  const { totalCount } = useFindManyRecords({
+    ...params,
+    limit: 1,
+    recordGqlFields: { id: true },
+  });
+  const countLabel =
+    typeof totalCount === 'number' ? ` (${totalCount.toLocaleString('en-US')})` : '';
   const { objectMetadataItem } = useObjectMetadataItem({ objectNameSingular });
   const apolloCoreClient = useApolloCoreClient();
   const { findManyRecordsQuery } = useFindManyRecordsQuery({
@@ -106,18 +113,18 @@ const EnrichViewButton = ({
       if (ids.length === 0) {
         enqueueToast({
           variant: 'warning',
-          children: t`This view has no records to enrich.`,
+          children: 'This view has no records to enrich.',
         });
       } else if (!posted) {
         enqueueToast({
           variant: 'warning',
-          children: t`Open the CRM from Labs to enrich this view.`,
+          children: 'Open the CRM from Labs to enrich this view.',
         });
       }
     } catch {
       enqueueToast({
         variant: 'warning',
-        children: t`Could not load this view for enrichment.`,
+        children: 'Could not load this view for enrichment.',
       });
     } finally {
       setBusy(false);
@@ -128,10 +135,10 @@ const EnrichViewButton = ({
     <LightButton
       startIcon={<IconWand size={14} />}
       disabled={busy}
-      title={object === 'person' ? t`Enrich everyone in this view` : t`Enrich the records in this view`}
+      title={object === 'person' ? 'Enrich everyone in this view' : 'Enrich the records in this view'}
       onClick={() => void enrichView()}
     >
-      {busy ? t`Loading view…` : object === 'person' ? t`Enrich all` : t`Enrich view`}
+      {busy ? 'Loading view…' : `Enrich All${countLabel}`}
     </LightButton>
   );
 };
