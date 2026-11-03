@@ -1,4 +1,5 @@
 import { RecordIndexCommandMenu } from '@/command-menu-item/components/RecordIndexCommandMenu';
+import { OpenInRevenueAgentButton } from '@/object-record/upgraded-revenue-agent/OpenInRevenueAgentButton';
 import { UpgradedEnrichViewButton } from '@/object-record/upgraded-enrich/UpgradedEnrichViewButton';
 import { contextStoreCurrentViewIdComponentState } from '@/context-store/states/contextStoreCurrentViewIdComponentState';
 import { contextStoreNumberOfSelectedRecordsComponentState } from '@/context-store/states/contextStoreNumberOfSelectedRecordsComponentState';
@@ -84,6 +85,7 @@ export const RecordIndexPageHeader = () => {
         actionButton={
           isDefined(contextStoreCurrentViewId) ? (
             <>
+              <OpenInRevenueAgentButton />
               <UpgradedEnrichViewButton />
               <RecordIndexCommandMenu />
               {!isLayoutCustomizationModeEnabled &&
