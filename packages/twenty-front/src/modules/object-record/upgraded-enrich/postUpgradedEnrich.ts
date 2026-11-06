@@ -16,7 +16,10 @@ const parentOrigin = () => {
 export const postUpgradedEnrich = (message: {
   object: UpgradedEnrichObject;
   ids: string[];
+  companies?: { id: string; name?: string; domain?: string | null }[];
   scope: 'record' | 'view';
+  append?: boolean;
+  paging?: boolean;
   truncated?: boolean;
   totalCount?: number;
 }) => {
