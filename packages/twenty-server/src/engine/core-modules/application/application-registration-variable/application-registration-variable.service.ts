@@ -241,9 +241,13 @@ export class ApplicationRegistrationVariableService {
       return true;
     }
 
-    return (
-      isDefined(registration?.ownerWorkspaceId) && isInstalledOnOwnerWorkspace
-    );
+    // Registry apps have no owner workspace. The public route is created when
+    // a workspace installs the app, so those apps stay in the catalog.
+    if (!isDefined(registration?.ownerWorkspaceId)) {
+      return true;
+    }
+
+    return isInstalledOnOwnerWorkspace;
   }
 
   private async findVariableOrThrow(
