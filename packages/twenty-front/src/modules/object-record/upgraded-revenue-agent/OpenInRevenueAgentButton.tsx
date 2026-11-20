@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useFindManyRecords } from '@/object-record/hooks/useFindManyRecords';
 import { useFindManyRecordIndexTableParams } from '@/object-record/record-index/hooks/useFindManyRecordIndexTableParams';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
+import {
+  parentOrigin,
+  readPersonRecord,
+} from '@/object-record/upgraded-enrich/postUpgradedEnrich';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { CoreObjectNameSingular } from 'twenty-shared/types';
 import { isDefined } from 'twenty-shared/utils';
@@ -10,45 +14,6 @@ import { LightButton, useToast } from 'twenty-ui/components';
 import { IconMessage } from 'twenty-ui/icon';
 
 const VIEW_OPEN_LIMIT = 200;
-
-type QueuePerson = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-};
-
-const readText = (value: unknown) =>
-  typeof value === 'string' ? value.trim() : '';
-
-const readPerson = (record: Record<string, unknown>): QueuePerson | null => {
-  const id = readText(record.id);
-  if (!id) return null;
-  const emails = record.emails;
-  const email =
-    emails !== null && typeof emails === 'object'
-      ? readText((emails as { primaryEmail?: unknown }).primaryEmail)
-      : '';
-  const name = record.name;
-  const firstName =
-    name !== null && typeof name === 'object'
-      ? readText((name as { firstName?: unknown }).firstName)
-      : '';
-  const lastName =
-    name !== null && typeof name === 'object'
-      ? readText((name as { lastName?: unknown }).lastName)
-      : '';
-  return { id, email, firstName, lastName };
-};
-
-const parentOrigin = () => {
-  try {
-    if (document.referrer) return new URL(document.referrer).origin;
-  } catch {
-    return '*';
-  }
-  return '*';
-};
 
 export const OpenInRevenueAgentButton = () => {
   const workspaceSurface = useWorkspaceSurface();
@@ -86,7 +51,7 @@ const OpenViewButton = ({ objectNameSingular }: { objectNameSingular: string }) 
     if (loading || sent.current) return;
     sent.current = true;
     const people = records
-      .map((record) => readPerson(record as Record<string, unknown>))
+      .map((record) => readPersonRecord(record as Record<string, unknown>))
       .filter(isDefined);
     const truncated = (totalCount ?? people.length) > people.length;
 
