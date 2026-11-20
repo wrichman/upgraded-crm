@@ -5,6 +5,7 @@ import { CommandMenuContext } from '@/command-menu-item/contexts/CommandMenuCont
 import { CommandMenuContextProvider } from '@/command-menu-item/contexts/CommandMenuContextProvider';
 import { useCommandMenuItemDisplay } from '@/command-menu-item/display/hooks/useCommandMenuItemDisplay';
 import { CommandMenuItemContainerType } from '@/command-menu-item/types/CommandMenuItemContainerType';
+import { type CommandMenuItemDefinition } from '@/command-menu-item/types/CommandMenuItemDefinition';
 import { useFindManyRecordsSelectedInContextStore } from '@/context-store/hooks/useFindManyRecordsSelectedInContextStore';
 import { contextStoreNumberOfSelectedRecordsComponentState } from '@/context-store/states/contextStoreNumberOfSelectedRecordsComponentState';
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
@@ -28,6 +29,7 @@ import {
   IconMail,
   IconPlaylistAdd,
   IconSend,
+  type IconComponent,
 } from 'twenty-ui/icon';
 import { themeCssVariables } from 'twenty-ui/theme';
 import { EngineComponentKey } from '~/generated-metadata/graphql';
@@ -139,6 +141,58 @@ const StyledMenuItem = styled.button<{ danger?: boolean }>`
   }
 `;
 
+const CommandActionButton = ({
+  item,
+  icon,
+  label,
+}: {
+  item: CommandMenuItemDefinition;
+  icon?: IconComponent;
+  label?: string;
+}) => {
+  const display = useCommandMenuItemDisplay(item);
+  const Icon = icon ?? display.Icon;
+
+  return (
+    <StyledAction
+      type="button"
+      disabled={display.disabled}
+      onClick={() => {
+        void display.handleClick();
+      }}
+    >
+      <Icon size={16} />
+      {label ?? display.shortLabel ?? display.label}
+    </StyledAction>
+  );
+};
+
+const MoreCommandItem = ({
+  item,
+  onDone,
+}: {
+  item: CommandMenuItemDefinition;
+  onDone: () => void;
+}) => {
+  const { Icon, label, handleClick, disabled } = useCommandMenuItemDisplay(item);
+  const danger = item.engineComponentKey === EngineComponentKey.DELETE_RECORDS;
+
+  return (
+    <StyledMenuItem
+      type="button"
+      danger={danger}
+      disabled={disabled}
+      onClick={() => {
+        void handleClick();
+        onDone();
+      }}
+    >
+      <Icon size={16} />
+      {label}
+    </StyledMenuItem>
+  );
+};
+
 const postPeopleAction = (
   action: 'add-to-list' | 'enroll-sequence' | 'send-newsletter',
   people: PersonWithEmail[],
@@ -189,7 +243,6 @@ const PeopleSelectionActionBarContent = ({
   const sendEmail = commandMenuItems.find(
     (item) => item.engineComponentKey === EngineComponentKey.COMPOSE_EMAIL,
   );
-  const sendEmailDisplay = useCommandMenuItemDisplay(sendEmail!);
   const moreItems = commandMenuItems.filter(
     (item) => item.engineComponentKey !== EngineComponentKey.COMPOSE_EMAIL,
   );
@@ -199,25 +252,6 @@ const PeopleSelectionActionBarContent = ({
   ) => {
     setMoreOpen(false);
     postPeopleAction(action, people, truncated);
-  };
-
-  const MenuItem = ({ item }: { item: typeof moreItems[0] }) => {
-    const display = useCommandMenuItemDisplay(item);
-    const danger = item.engineComponentKey === EngineComponentKey.DELETE_RECORDS;
-    return (
-      <StyledMenuItem
-        type="button"
-        danger={danger}
-        disabled={display.disabled}
-        onClick={() => {
-          void display.handleClick();
-          setMoreOpen(false);
-        }}
-      >
-        <display.Icon size={16} />
-        {display.label}
-      </StyledMenuItem>
-    );
   };
 
   return createPortal(
@@ -231,16 +265,11 @@ const PeopleSelectionActionBarContent = ({
         {t`Add to list`}
       </StyledAction>
       {isDefined(sendEmail) && (
-        <StyledAction
-          type="button"
-          disabled={sendEmailDisplay.disabled}
-          onClick={() => {
-            void sendEmailDisplay.handleClick();
-          }}
-        >
-          <IconMail size={16} />
-          {t`Send email`}
-        </StyledAction>
+        <CommandActionButton
+          item={sendEmail}
+          icon={IconMail}
+          label={t`Send email`}
+        />
       )}
       <StyledAction
         type="button"
@@ -268,7 +297,11 @@ const PeopleSelectionActionBarContent = ({
         {moreOpen && (
           <StyledMenu>
             {moreItems.map((item) => (
-              <MenuItem key={item.id} item={item} />
+              <MoreCommandItem
+                key={item.id}
+                item={item}
+                onDone={() => setMoreOpen(false)}
+              />
             ))}
           </StyledMenu>
         )}
