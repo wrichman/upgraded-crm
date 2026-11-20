@@ -11,6 +11,11 @@ import { contextStoreNumberOfSelectedRecordsComponentState } from '@/context-sto
 import { useNumberFormat } from '@/localization/hooks/useNumberFormat';
 import { useRecordIndexContextOrThrow } from '@/object-record/record-index/contexts/RecordIndexContext';
 import { useResetRecordIndexSelection } from '@/object-record/record-index/hooks/useResetRecordIndexSelection';
+import {
+  parentOrigin,
+  readPersonRecord,
+  type PersonWithEmail,
+} from '@/object-record/upgraded-enrich/postUpgradedEnrich';
 import { useWorkspaceSurface } from '@/ui/layout/hooks/useWorkspaceSurface';
 import { useAtomComponentStateValue } from '@/ui/utilities/state/jotai/hooks/useAtomComponentStateValue';
 import { styled } from '@linaria/react';
@@ -30,13 +35,6 @@ import { themeCssVariables } from 'twenty-ui/theme';
 import { EngineComponentKey } from '~/generated-metadata/graphql';
 
 const PEOPLE_ACTION_LIMIT = 200;
-
-type SelectedPerson = {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-};
 
 const StyledBar = styled.div`
   align-items: center;
@@ -143,67 +141,6 @@ const StyledMenuItem = styled.button<{ danger?: boolean }>`
   }
 `;
 
-const readText = (value: unknown) =>
-  typeof value === 'string' ? value.trim() : '';
-
-const readSelectedPerson = (
-  record: Record<string, unknown>,
-): SelectedPerson | null => {
-  const id = readText(record.id);
-
-  if (!id) {
-    return null;
-  }
-
-  const emails = record.emails;
-  const email =
-    emails !== null && typeof emails === 'object'
-      ? readText((emails as { primaryEmail?: unknown }).primaryEmail)
-      : '';
-  const name = record.name;
-  const firstName =
-    name !== null && typeof name === 'object'
-      ? readText((name as { firstName?: unknown }).firstName)
-      : '';
-  const lastName =
-    name !== null && typeof name === 'object'
-      ? readText((name as { lastName?: unknown }).lastName)
-      : '';
-
-  return { id, email, firstName, lastName };
-};
-
-const parentOrigin = () => {
-  try {
-    if (document.referrer) {
-      return new URL(document.referrer).origin;
-    }
-  } catch {
-    return '*';
-  }
-
-  return '*';
-};
-
-const postPeopleAction = (
-  action: 'add-to-list' | 'enroll-sequence' | 'send-newsletter',
-  people: SelectedPerson[],
-  truncated: boolean,
-) => {
-  const withEmail = people.filter((person) => person.email.includes('@'));
-
-  window.parent.postMessage(
-    {
-      source: 'upgraded-crm',
-      type: 'people-selection-action',
-      action,
-      truncated,
-      people: withEmail,
-    },
-    parentOrigin(),
-  );
-};
-
 const CommandActionButton = ({
   item,
   icon,
@@ -256,6 +193,25 @@ const MoreCommandItem = ({
   );
 };
 
+const postPeopleAction = (
+  action: 'add-to-list' | 'enroll-sequence' | 'send-newsletter',
+  people: PersonWithEmail[],
+  truncated: boolean,
+) => {
+  const withEmail = people.filter((person) => person.email.includes('@'));
+
+  window.parent.postMessage(
+    {
+      source: 'upgraded-crm',
+      type: 'people-selection-action',
+      action,
+      truncated,
+      people: withEmail,
+    },
+    parentOrigin(),
+  );
+};
+
 const PeopleSelectionActionBarContent = ({
   count,
   onClear,
@@ -278,7 +234,7 @@ const PeopleSelectionActionBarContent = ({
   const people = useMemo(
     () =>
       records
-        .map((record) => readSelectedPerson(record as Record<string, unknown>))
+        .map((record) => readPersonRecord(record as Record<string, unknown>))
         .filter(isDefined),
     [records],
   );
@@ -297,10 +253,6 @@ const PeopleSelectionActionBarContent = ({
     setMoreOpen(false);
     postPeopleAction(action, people, truncated);
   };
-
-  if (typeof document === 'undefined') {
-    return null;
-  }
 
   return createPortal(
     <StyledBar>
